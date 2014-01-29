@@ -1,0 +1,51 @@
+<style>
+
+    ul.marger_list{
+        list-style: none;
+        padding: 0px;
+    }
+    .marger_list li{
+        margin: 3px 0px;
+    }
+</style>
+<h1>Объединение контактов</h1>
+<div     class="fields form">
+    <form action="?module=plugins&id=mergercontact&action=save" method="post" id="plugins-settings-form">
+        {$wa->csrf()}
+
+        <div class="field">
+            <div class="name">
+                Статус плагина
+            </div>
+            <div class="value">
+                <select name="shop_mergercontact[status]">
+                    <option {if $settings.status == 1} selected="selected"{/if} value="1">Включен</option>
+                    <option {if $settings.status == 0} selected="selected"{/if} value="0">Выключен</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="name">
+                Объединять по:
+            </div>
+            <div class="value">
+                <ul class="marger_list">
+                    {foreach $fields as $field => $field_name}
+                    <li><input {if isset($settings.mergerfields[$field])}checked="checked"{/if} type="checkbox" name="shop_mergercontact[mergerfields][{$field}]" value="1" /> {$field_name}</li>
+                    {/foreach}
+                </ul>
+                <p class="hint">Поля, по которым происходит объединение контактов</p>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="value submit">
+                <input type="submit" class="button green" value="Сохранить">
+                <span id="plugins-settings-form-status" style="display:none">
+                    <i style="vertical-align:middle" class="icon16 yes"></i> [`Saved`]
+                </span>
+            </div>
+        </div>
+    </form>
+</div>
