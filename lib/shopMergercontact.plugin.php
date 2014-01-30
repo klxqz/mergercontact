@@ -11,7 +11,7 @@ class shopMergercontactPlugin extends shopPlugin {
         foreach ($result as $field => $value) {
             $vals[] = "$field: $value;";
         }
-        $message = waDateTime::date('Y-m-d H:i:s') . ":\r\n" .
+        $message = "\r\n" .
                 "merged by: " . $merged_field . ";\r\n" .
                 "value: " . $merged_value . ";\r\n" .
                 implode("\r\n", $vals);
