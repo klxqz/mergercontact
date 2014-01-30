@@ -1,17 +1,17 @@
-Плагин "Быстрый заказ" для Shop-Script 5
+Плагин "Объединение контактов" для Shop-Script 5
 --------------------------
-Разработчик Коробов Николай wa-plugins.ru <support@wa-plugins.ru>
+Разработчик wa-plugins.ru <support@wa-plugins.ru>
 
-Плагин позволяет быстро оформить заказ.
+Плагин позволяет в автоматическом режиме объединить дублирующиеся контакты по заданному признаку.
 --------------------------
 Установка:
 
-   1) Скопируйте в каталог wa-apps/shop/plugins/ папку instantorder/
+   1) Скопируйте в каталог wa-apps/shop/plugins/ папку mergercontact/
     2) Добавьте запись в конфигурационный файл фреймворка wa-config/apps/shop/plugins.php:
-          'instantorder' => true
+          'mergercontact' => true
           Пример содержимого файла plugins.php:
             return array (
-                'instantorder' => true
+                'mergercontact' => true
             );
 --------------------------
 Использование:

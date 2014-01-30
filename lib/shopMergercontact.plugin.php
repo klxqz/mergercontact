@@ -1,23 +1,53 @@
 <?php
 
+/**
+ * @author wa-plugins.ru <support@wa-plugins.ru>
+ * @link http://wa-plugins.ru/
+ */
 class shopMergercontactPlugin extends shopPlugin {
 
-    public function orderActionCreate($params) {
-        //$settings = $this->getSettings();
-        //print_r($settings);
-        //print_r($params);exit;
-        $contact = new waContact($params['contact_id']);
-        
-        
-        $contact_data = $contact->load();
-echo $contact->get('email', "default");
-        //print_r($contact_data);exit;
+    protected function log($result, $merged_field, $merged_value) {
+        $vals = array();
+        foreach ($result as $field => $value) {
+            $vals[] = "$field: $value;";
+        }
+        $message = waDateTime::date('Y-m-d H:i:s') . ":\r\n" .
+                "merged by: " . $merged_field . ";\r\n" .
+                "value: " . $merged_value . ";\r\n" .
+                implode("\r\n", $vals);
+        waLog::log($message, 'shop/plugins/mergercontact.log');
+    }
 
-        $h = 'search/inn=111222333';
-        $collection = new waContactsCollection($h);
-        $contacts = $collection->getContacts('*');
-        print_r($contacts);exit;
-                
+    public function orderActionCreate($params) {
+        $settings = $this->getSettings();
+        if (!$settings['status'] || !isset($settings['mergerfields'])) {
+            return;
+        }
+        $contact_id = $params['contact_id'];
+        $contact = new waContact($contact_id);
+        foreach ($settings['mergerfields'] as $field => $cheched) {
+            if ($cheched) {
+                $value = $contact->get($field, "default");
+                $h = "search/" . $field . "=" . $value;
+                $collection = new waContactsCollection($h);
+                $contacts = $collection->getContacts('*');
+                unset($contacts[$contact_id]);
+                if ($contacts) {
+                    if ($settings['master'] == 'new') {
+                        $master_id = $contact_id;
+                        $ids = array_keys($contacts);
+                    } else {
+                        $master_contact = array_pop($contacts);
+                        $master_id = $master_contact['id'];
+                        $ids = array_keys($contacts);
+                        $ids[] = $contact_id;
+                    }
+                    $result = $this->merge($ids, $master_id);
+                    $this->log($result, $field, $value);
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -33,7 +63,7 @@ echo $contact->get('email', "default");
         $merge_ids[] = $master_id;
 
         // List of contacts to merge
-        $collection = new contactsCollection('id/' . implode(',', $merge_ids));
+        $collection = new waContactsCollection('id/' . implode(',', $merge_ids));
         $contacts_data = $collection->getContacts('*');
 
         // Master contact data
@@ -130,13 +160,78 @@ echo $contact->get('email', "default");
 
         // Merge event
         $params = array('contacts' => array_keys($contacts_data), 'id' => $master_data['id']);
-        wa()->event('merge', $params);
+        $this->shopMergeHandler($params);
 
         // Delete all merged contacts
         $contact_model = new waContactModel();
         $contact_model->delete(array_keys($contacts_data), false); // false == do not trigger event
 
         return $result;
+    }
+
+    protected function shopMergeHandler(&$params) {
+        $master_id = $params['id'];
+        $merge_ids = $params['contacts'];
+        $all_ids = array_merge($merge_ids, array($master_id));
+
+        $m = new waModel();
+
+        //
+        // All the simple cases: update contact_id in tables
+        //
+        foreach (array(
+    array('shop_cart_items', 'contact_id'),
+    array('shop_checkout_flow', 'contact_id'),
+    array('shop_order', 'contact_id'),
+    array('shop_order_log', 'contact_id'),
+    array('shop_product', 'contact_id'),
+    array('shop_product_reviews', 'contact_id'),
+    array('shop_affiliate_transaction', 'contact_id'), // also see below
+        // No need to do this since users are never merged into other contacts
+        //array('shop_coupon', 'create_contact_id'),
+        //array('shop_page', 'create_contact_id'),
+        //array('shop_product_pages', 'create_contact_id'),
+        ) as $pair) {
+            list($table, $field) = $pair;
+            $sql = "UPDATE $table SET $field = :master WHERE $field in (:ids)";
+            $m->exec($sql, array('master' => $master_id, 'ids' => $merge_ids));
+        }
+
+        //
+        // shop_affiliate_transaction
+        //
+        $balance = 0.0;
+        $sql = "SELECT * FROM shop_affiliate_transaction WHERE contact_id=? ORDER BY id";
+        foreach ($m->query($sql, $master_id) as $row) {
+            $balance += $row['amount'];
+            if ($row['balance'] != $balance) {
+                $m->exec("UPDATE shop_affiliate_transaction SET balance=? WHERE id=?", $balance, $row['id']);
+            }
+        }
+        $affiliate_bonus = $balance;
+
+        //
+        // shop_customer
+        //
+
+        // Make sure it exists
+        $cm = new shopCustomerModel();
+        $cm->createFromContact($master_id);
+
+        $sql = "SELECT SUM(number_of_orders) FROM shop_customer WHERE contact_id IN (:ids)";
+        $number_of_orders = $m->query($sql, array('ids' => $all_ids))->fetchField();
+
+        $sql = "SELECT MAX(last_order_id) FROM shop_customer WHERE contact_id IN (:ids)";
+        $last_order_id = $m->query($sql, array('ids' => $all_ids))->fetchField();
+
+        $sql = "UPDATE shop_customer SET number_of_orders=?, last_order_id=?, affiliate_bonus=? WHERE contact_id=?";
+        $m->exec($sql, ifempty($number_of_orders, 0), ifempty($last_order_id, null), ifempty($affiliate_bonus, 0), $master_id);
+
+        if ($number_of_orders) {
+            shopCustomers::recalculateTotalSpent($master_id);
+        }
+
+        return null;
     }
 
 }

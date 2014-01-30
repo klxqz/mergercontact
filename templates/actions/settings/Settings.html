@@ -1,15 +1,37 @@
+<script src="{$wa_url}wa-content/js/jquery-ui/jquery.ui.sortable.min.js"></script>
 <style>
-
-    ul.marger_list{
+    ul{
         list-style: none;
         padding: 0px;
     }
     .marger_list li{
+        cursor: move;
+        padding: 5px;
         margin: 3px 0px;
+        padding-left: 25px; 
+        width: 200px;
+        border-radius:5px;
+        -webkit-border-radius:5px;
+        -moz-border-radius:5px;
+        -khtml-border-radius:5px;
+    }
+    .marger_list li span {
+        position: absolute; 
+        margin-left: -20px;
     }
 </style>
+
+<script>
+    $(function() {
+        $(".marger_list").sortable();
+        $("#sortable").disableSelection();
+    });
+</script>
+
+
+
 <h1>Объединение контактов</h1>
-<div     class="fields form">
+<div class="fields form">
     <form action="?module=plugins&id=mergercontact&action=save" method="post" id="plugins-settings-form">
         {$wa->csrf()}
 
@@ -31,11 +53,28 @@
             </div>
             <div class="value">
                 <ul class="marger_list">
-                    {foreach $fields as $field => $field_name}
-                    <li><input {if isset($settings.mergerfields[$field])}checked="checked"{/if} type="checkbox" name="shop_mergercontact[mergerfields][{$field}]" value="1" /> {$field_name}</li>
+                    {foreach $settings.mergerfields as $field => $checked}
+                    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
+                        <input type="hidden" name="shop_mergercontact[mergerfields][{$field}]" value="0" />
+                        <input {if $checked}checked="checked"{/if} type="checkbox" name="shop_mergercontact[mergerfields][{$field}]" value="1" /> 
+                            {$fields[$field]}
+                    </li>
                     {/foreach}
                 </ul>
-                <p class="hint">Поля, по которым происходит объединение контактов</p>
+                <p class="hint">Поля, по которым происходит объединение контактов<br>Перетаскивайте поля для изменения приоритета при поиске схожих контактов</p>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="name">
+                Главный контакт:
+            </div>
+            <p>Выберите главный контакт, который останется после объединения. Остальные контакты в результате выполнения процедуры объединения будут удалены. Контактная информация из удаляемых контактов, за исключением уникальных полей, будет добавлена в главный контакт. Ссылки на удаляемые контакты, которые есть в других приложениях, будут изменены на главный контакт. </p>
+            <div class="value">
+                <ul>
+                    <li><input type="radio" {if $settings.master == 'new'}checked="checked"{/if} name="shop_mergercontact[master]" value="new"> - Вновь созданный</li>
+                    <li><input type="radio" {if $settings.master == 'old'}checked="checked"{/if} name="shop_mergercontact[master]" value="old"> - Самый старый из уже существующих</li>
+                </ul>
             </div>
         </div>
 
