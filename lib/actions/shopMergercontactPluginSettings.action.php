@@ -12,14 +12,9 @@ class shopMergercontactPluginSettingsAction extends waViewAction {
         if (isset($settings['mergerfields'])) {
             $settings['mergerfields'] = json_decode($settings['mergerfields'], true);
         } else {
-            $settings['mergerfields'] = array(
-                'phone' => '0',
-                'email' => '0',
-                'name' => '0',
-                'inn' => '0',
-            );
+            $settings['mergerfields'] = array();
         }
-        $fields = array('name' => 'Полное имя', 'email' => 'Email', 'phone' => 'Телефон', 'inn' => 'ИНН');
+        $fields = waContactFields::getAll();
         $this->view->assign('fields', $fields);
         $this->view->assign('settings', $settings);
     }

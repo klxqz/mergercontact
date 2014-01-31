@@ -14,16 +14,49 @@
         -webkit-border-radius:5px;
         -moz-border-radius:5px;
         -khtml-border-radius:5px;
+        position: relative;
     }
     .marger_list li span {
         position: absolute; 
-        margin-left: -20px;
+        left: 5px;
+    }
+    .remove-field{
+        right: 0px;
+        position: absolute;
+    }
+    .add-field{
+        margin-left: 10px;
     }
 </style>
 
 <script>
     $(function() {
-        $(".marger_list").sortable();
+        function initRemove() {
+            $('.remove-field').click(function() {
+                $(this).closest('li').remove();
+                return false;
+            });
+        }
+        $('.marger_list').sortable();
+        initRemove();
+
+        $('.add-field').click(function() {
+            var name = $('select.contact_fields option:selected').text();
+            var value = $('select.contact_fields option:selected').val();
+            if ($('ul.marger_list li.field-' + value).length > 0) {
+                alert('Это поле уже добавлено.');
+                return false;
+            }
+            $('.marger_list').append('<li class="ui-state-default field-' + value + '">\
+                                        <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>\
+                                        <input type="hidden" name="shop_mergercontact[mergerfields][' + value + ']" value="0" />\
+                                        <input type="checkbox" name="shop_mergercontact[mergerfields][' + value + ']" value="1" />\
+                                        ' + name + '\
+                                        <a class="remove-field" href="#"><i class="icon16 cross"></i></a>\
+                                      </li>');
+            initRemove();
+            return false;
+        });
     });
 </script>
 
@@ -31,7 +64,7 @@
 
 <h1>Объединение контактов</h1>
 <div class="fields form">
-    <form action="?module=plugins&id=mergercontact&action=save" method="post" id="plugins-settings-form">
+    <form action="?plugin=mergercontact&action=save" method="post" id="plugins-settings-form">
         {$wa->csrf()}
 
         <div class="field">
@@ -53,13 +86,21 @@
             <div class="value">
                 <ul class="marger_list">
                     {foreach $settings.mergerfields as $field => $checked}
-                    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
+                    <li class="ui-state-default field-{$field}"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
                         <input type="hidden" name="shop_mergercontact[mergerfields][{$field}]" value="0" />
                         <input {if $checked}checked="checked"{/if} type="checkbox" name="shop_mergercontact[mergerfields][{$field}]" value="1" /> 
-                            {$fields[$field]}
+                            {$fields[$field]->getName()}
+                            <a class="remove-field" href="#"><i class="icon16 cross"></i></a>
                     </li>
                     {/foreach}
                 </ul>
+
+                <select class="contact_fields">
+                    {foreach from=$fields item=field}
+                    <option value="{$field->getId()}">{if $field->getId()=='name'}Полное имя{else}{$field->getName()}{/if}</option>
+                    {/foreach}
+                </select><a class="add-field" href="#"><i class="icon16 add"></i>Добавить поле</a>
+
                 <p class="hint">Поля, по которым происходит объединение контактов<br>Перетаскивайте поля для изменения приоритета при поиске схожих контактов</p>
             </div>
         </div>
